@@ -39,7 +39,7 @@ def print_results(project_type, results, pkg_aliases, sug_version_dict, scoped_p
         width = None
         if h == "Id":
             width = 20
-        elif h == "Used?" or h == "Fix Version":
+        elif h in ["Used?", "Fix Version"]:
             width = 10
         elif h == "Description":
             width = 58
@@ -49,14 +49,10 @@ def print_results(project_type, results, pkg_aliases, sug_version_dict, scoped_p
         id = vuln_occ_dict.get("id")
         package_issue = res.package_issue
         full_pkg = package_issue.affected_location.package
-        project_type_pkg = "{}:{}".format(
-            project_type, package_issue.affected_location.package
-        )
+        project_type_pkg = f"{project_type}:{package_issue.affected_location.package}"
         if package_issue.affected_location.vendor:
-            full_pkg = "{}:{}".format(
-                package_issue.affected_location.vendor,
-                package_issue.affected_location.package,
-            )
+            full_pkg = f"{package_issue.affected_location.vendor}:{package_issue.affected_location.package}"
+
         # De-alias package names
         full_pkg = pkg_aliases.get(full_pkg, full_pkg)
         fixed_location = sug_version_dict.get(full_pkg, package_issue.fixed_location)
@@ -80,34 +76,26 @@ def print_results(project_type, results, pkg_aliases, sug_version_dict, scoped_p
             package_name_style = "[italic]"
         package = full_pkg.split(":")[-1]
         table.add_row(
-            "{}{}{}{}".format(
-                id_style,
-                package_name_style,
-                "[bright_red]" if pkg_severity == "CRITICAL" else "",
-                id,
-            ),
-            "{}{}".format(package_name_style, package),
+            f'{id_style}{package_name_style}{"[bright_red]" if pkg_severity == "CRITICAL" else ""}{id}',
+            f"{package_name_style}{package}",
             package_usage,
             package_issue.affected_location.version,
             fixed_location,
-            "{}{}".format(
-                "[bright_red]" if pkg_severity == "CRITICAL" else "",
-                vuln_occ_dict.get("severity"),
-            ),
-            "{}{}".format(
-                "[bright_red]" if pkg_severity == "CRITICAL" else "",
-                vuln_occ_dict.get("cvss_score"),
-            ),
+            f'{"[bright_red]" if pkg_severity == "CRITICAL" else ""}{vuln_occ_dict.get("severity")}',
+            f'{"[bright_red]" if pkg_severity == "CRITICAL" else ""}{vuln_occ_dict.get("cvss_score")}',
         )
+
     console.print(table)
     if scoped_pkgs:
         if pkg_attention_count:
             rmessage = f":heavy_exclamation_mark: [magenta]{pkg_attention_count}[/magenta] out of {len(results)} vulnerabilities requires your attention."
             if fix_version_count:
-                if fix_version_count == pkg_attention_count:
-                    rmessage += "\n:white_heavy_check_mark: You can update [bright_green]all[/bright_green] the packages using the mentioned fix version to remediate."
-                else:
-                    rmessage += f"\nYou can remediate [bright_green]{fix_version_count}[/bright_green] {'vulnerability' if fix_version_count == 1 else 'vulnerabilities'} by updating the packages using the fix version :thumbsup:."
+                rmessage += (
+                    "\n:white_heavy_check_mark: You can update [bright_green]all[/bright_green] the packages using the mentioned fix version to remediate."
+                    if fix_version_count == pkg_attention_count
+                    else f"\nYou can remediate [bright_green]{fix_version_count}[/bright_green] {'vulnerability' if fix_version_count == 1 else 'vulnerabilities'} by updating the packages using the fix version :thumbsup:."
+                )
+
             console.print(
                 Panel(
                     rmessage,
@@ -155,15 +143,11 @@ def jsonl_report(
             package_issue = data.package_issue
             full_pkg = package_issue.affected_location.package
             if package_issue.affected_location.vendor:
-                full_pkg = "{}:{}".format(
-                    package_issue.affected_location.vendor,
-                    package_issue.affected_location.package,
-                )
+                full_pkg = f"{package_issue.affected_location.vendor}:{package_issue.affected_location.package}"
+
             # De-alias package names
             full_pkg = pkg_aliases.get(full_pkg, full_pkg)
-            project_type_pkg = "{}:{}".format(
-                project_type, package_issue.affected_location.package
-            )
+            project_type_pkg = f"{project_type}:{package_issue.affected_location.package}"
             fixed_location = sug_version_dict.get(
                 full_pkg, package_issue.fixed_location
             )
@@ -215,7 +199,7 @@ def analyse_pkg_risks(
             continue
         risk_metrics = risk_obj.get("risk_metrics")
         scope = risk_obj.get("scope")
-        project_type_pkg = "{}:{}".format(project_type, pkg).lower()
+        project_type_pkg = f"{project_type}:{pkg}".lower()
         if project_type_pkg in required_pkgs:
             scope = "required"
         elif project_type_pkg in optional_pkgs:
@@ -224,12 +208,12 @@ def analyse_pkg_risks(
             scope = "excluded"
         package_usage = "N/A"
         package_usage_simple = "N/A"
-        if scope == "required":
-            package_usage = "[bright_green][bold]Yes"
-            package_usage_simple = "Yes"
         if scope == "optional":
             package_usage = "[magenta]No"
             package_usage_simple = "No"
+        elif scope == "required":
+            package_usage = "[bright_green][bold]Yes"
+            package_usage_simple = "Yes"
         if not risk_metrics:
             continue
         if risk_metrics.get("risk_score") and (
@@ -252,9 +236,7 @@ def analyse_pkg_risks(
             for rk, rv in risk_metrics.items():
                 if rk.endswith("_risk") and rv is True:
                     rcat = rk.replace("_risk", "")
-                    help_text = config.risk_help_text.get(rcat)
-                    # Only add texts that are available.
-                    if help_text:
+                    if help_text := config.risk_help_text.get(rcat):
                         if rcat in ("pkg_deprecated", "pkg_private_on_public_registry"):
                             risk_categories.append(f":cross_mark: {help_text}")
                         else:
@@ -338,10 +320,8 @@ def suggest_version(results, pkg_aliases={}):
             full_pkg = package_issue.affected_location.package
             fixed_location = package_issue.fixed_location
             if package_issue.affected_location.vendor:
-                full_pkg = "{}:{}".format(
-                    package_issue.affected_location.vendor,
-                    package_issue.affected_location.package,
-                )
+                full_pkg = f"{package_issue.affected_location.vendor}:{package_issue.affected_location.package}"
+
         # De-alias package names
         full_pkg = pkg_aliases.get(full_pkg, full_pkg)
         version_upgrades = pkg_fix_map.get(full_pkg, set())
@@ -349,7 +329,6 @@ def suggest_version(results, pkg_aliases={}):
         pkg_fix_map[full_pkg] = version_upgrades
     for k, v in pkg_fix_map.items():
         if v:
-            mversion = max_version(list(v))
-            if mversion:
+            if mversion := max_version(list(v)):
                 sug_map[k] = mversion
     return sug_map

@@ -19,4 +19,3 @@ for line in r.iter_lines():
                 print(npm_pkg, risk_metrics)
         except Exception as e:
             print(line, e)
-            pass

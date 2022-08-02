@@ -44,9 +44,7 @@ def find_python_reqfiles(path):
     ]
     for root, dirs, files in os.walk(path):
         filter_ignored_dirs(dirs)
-        for name in req_files:
-            if name in files:
-                result.append(os.path.join(root, name))
+        result.extend(os.path.join(root, name) for name in req_files if name in files)
     return result
 
 
@@ -123,10 +121,8 @@ def get_pkg_vendor_name(pkg):
     """
     vendor = pkg.get("vendor")
     if not vendor:
-        purl = pkg.get("purl")
-        if purl:
-            purl_parts = purl.split("/")
-            if purl_parts:
+        if purl := pkg.get("purl"):
+            if purl_parts := purl.split("/"):
                 vendor = purl_parts[0].replace("pkg:", "")
         else:
             vendor = ""
@@ -149,9 +145,10 @@ def search_pkgs(db, project_type, pkg_list):
         expanded_list += variations
         vendor, name = get_pkg_vendor_name(pkg)
         # TODO: Use purl here
-        pkg_aliases[vendor + ":" + name] = [
-            "{}:{}".format(vari.get("vendor"), vari.get("name")) for vari in variations
+        pkg_aliases[f"{vendor}:{name}"] = [
+            f'{vari.get("vendor")}:{vari.get("name")}' for vari in variations
         ]
+
     quick_res = dbLib.bulk_index_search(expanded_list)
     raw_results = dbLib.pkg_bulk_search(db, quick_res)
     raw_results = normalize.dedup(project_type, raw_results, pkg_aliases=pkg_aliases)

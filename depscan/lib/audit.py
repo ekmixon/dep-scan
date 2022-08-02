@@ -23,10 +23,9 @@ def audit(project_type, pkg_list, report_file):
     :param pkg_list: List of packages
     :param report_file: Report file
     """
-    results = type_audit_map[project_type].bulk_search(
+    return type_audit_map[project_type].bulk_search(
         app_info=config.npm_app_info, pkg_list=pkg_list
     )
-    return results
 
 
 def risk_audit(project_type, scoped_pkgs, private_ns, pkg_list, report_file):
@@ -39,5 +38,4 @@ def risk_audit(project_type, scoped_pkgs, private_ns, pkg_list, report_file):
     :param report_file: Report file
     """
     audit_fn = risk_audit_map[project_type]
-    results = audit_fn(scoped_pkgs, pkg_list, private_ns)
-    return results
+    return audit_fn(scoped_pkgs, pkg_list, private_ns)

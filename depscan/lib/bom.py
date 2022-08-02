@@ -19,7 +19,7 @@ def exec_tool(args, cwd=None, stdout=subprocess.PIPE):
       args cli command and args
     """
     try:
-        LOG.debug('⚡︎ Executing "{}"'.format(" ".join(args)))
+        LOG.debug(f'⚡︎ Executing "{" ".join(args)}"')
         subprocess.run(
             args,
             stdout=stdout,
@@ -79,10 +79,14 @@ def parse_bom_ref(bomstr, licenses=None):
 
 def get_licenses(ele):
     """ """
-    license_list = []
     namespace = "{http://cyclonedx.org/schema/bom/1.2}"
-    for data in ele.findall("{0}licenses/{0}license/{0}id".format(namespace)):
-        license_list.append(data.text)
+    license_list = [
+        data.text
+        for data in ele.findall(
+            "{0}licenses/{0}license/{0}id".format(namespace)
+        )
+    ]
+
     if not license_list:
         for data in ele.findall("{0}licenses/{0}license/{0}name".format(namespace)):
             if data and data.text:
@@ -95,8 +99,7 @@ def get_licenses(ele):
                     ]
                 elif "/" in data.text:
                     ld_list = [cleanup_license_string(data.text)]
-                for ld in ld_list:
-                    license_list.append(ld.strip().upper())
+                license_list.extend(ld.strip().upper() for ld in ld_list)
     return license_list
 
 
@@ -166,7 +169,7 @@ def get_pkg_list(xmlfile):
                         licenses = get_licenses(ele)
                         pkgs.append(get_package(ele, licenses))
     except xml.etree.ElementTree.ParseError as pe:
-        LOG.debug("Unable to parse {} {}".format(xmlfile, pe))
+        LOG.debug(f"Unable to parse {xmlfile} {pe}")
         LOG.warning(
             "Unable to produce Software Bill-of-Materials for this project. Execute the scan after installing the dependencies!"
         )
@@ -179,11 +182,15 @@ def get_pkg_by_type(pkg_list, pkg_type):
     :param pkg_list list of packages
     :param pkg_type Package type
     """
-    if not pkg_list:
-        return []
-    return [
-        pkg for pkg in pkg_list if pkg.get("purl", "").startswith("pkg:" + pkg_type)
-    ]
+    return (
+        [
+            pkg
+            for pkg in pkg_list
+            if pkg.get("purl", "").startswith(f"pkg:{pkg_type}")
+        ]
+        if pkg_list
+        else []
+    )
 
 
 def create_bom(project_type, bom_file, src_dir="."):
@@ -198,10 +205,9 @@ def create_bom(project_type, bom_file, src_dir="."):
     cdxgen_cmd = os.environ.get("CDXGEN_CMD", "cdxgen")
     if not shutil.which(cdxgen_cmd):
         LOG.warning(
-            "{} command not found. Please install using npm install @appthreat/cdxgen or set PATH variable".format(
-                cdxgen_cmd
-            )
+            f"{cdxgen_cmd} command not found. Please install using npm install @appthreat/cdxgen or set PATH variable"
         )
+
         return False
     if project_type in ("docker"):
         LOG.info(

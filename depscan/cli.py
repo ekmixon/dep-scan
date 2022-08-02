@@ -76,10 +76,11 @@ def build_args():
     parser.add_argument(
         "--risk-audit",
         action="store_true",
-        default=True if os.getenv("ENABLE_OSS_RISK", "") in ["true", "1"] else False,
+        default=os.getenv("ENABLE_OSS_RISK", "") in ["true", "1"],
         dest="risk_audit",
         help="Perform package risk audit (slow operation). Npm only.",
     )
+
     parser.add_argument(
         "--private-ns",
         dest="private_ns",
@@ -135,7 +136,7 @@ def scan(db, project_type, pkg_list, suggest_mode):
     if not pkg_list:
         LOG.debug("Empty package search attempted!")
     else:
-        LOG.info("Scanning {} oss dependencies for issues".format(len(pkg_list)))
+        LOG.info(f"Scanning {len(pkg_list)} oss dependencies for issues")
     results, pkg_aliases = utils.search_pkgs(db, project_type, pkg_list)
     # pkg_aliases is a dict that can be used to find the original vendor and package name
     # This way we consistently use the same names used by the caller irrespective of how
@@ -146,10 +147,9 @@ def scan(db, project_type, pkg_list, suggest_mode):
         sug_version_dict = suggest_version(results, pkg_aliases)
         if sug_version_dict:
             LOG.debug(
-                "Adjusting fix version based on the initial suggestion {}".format(
-                    sug_version_dict
-                )
+                f"Adjusting fix version based on the initial suggestion {sug_version_dict}"
             )
+
             # Recheck packages
             sug_pkg_list = []
             for k, v in sug_version_dict.items():
@@ -165,7 +165,7 @@ def scan(db, project_type, pkg_list, suggest_mode):
                 else:
                     name = tmpA[0]
                 # De-alias the vendor and package name
-                full_pkg = "{}:{}".format(vendor, name)
+                full_pkg = f"{vendor}:{name}"
                 full_pkg = pkg_aliases.get(full_pkg, full_pkg)
                 vendor, name = full_pkg.split(":")
                 sug_pkg_list.append(
@@ -177,7 +177,7 @@ def scan(db, project_type, pkg_list, suggest_mode):
             override_results, _ = utils.search_pkgs(db, project_type, sug_pkg_list)
             if override_results:
                 new_sug_dict = suggest_version(override_results)
-                LOG.debug("Received override results: {}".format(new_sug_dict))
+                LOG.debug(f"Received override results: {new_sug_dict}")
                 for nk, nv in new_sug_dict.items():
                     sug_version_dict[nk] = nv
     return results, pkg_aliases, sug_version_dict
@@ -217,8 +217,7 @@ def summarise(
         )
     if console_print:
         print_results(project_type, results, pkg_aliases, sug_version_dict, scoped_pkgs)
-    summary = analyse(project_type, results)
-    return summary
+    return analyse(project_type, results)
 
 
 def main():

@@ -24,7 +24,7 @@ def get_lookup_url(registry_type, pkg):
         if vendor and vendor != "npm":
             # npm expects namespaces to start with an @
             if not vendor.startswith("@"):
-                vendor = "@" + vendor
+                vendor = f"@{vendor}"
             key = f"{vendor}/{name}"
         return key, f"{config.npm_server}/{key}"
     elif registry_type == "pypi":
@@ -48,12 +48,12 @@ def metadata_from_registry(registry_type, scoped_pkgs, pkg_list, private_ns=None
     failure_count = 0
     done_count = 0
     with Progress(
-        console=console,
-        transient=True,
-        redirect_stderr=False,
-        redirect_stdout=False,
-        refresh_per_second=1,
-    ) as progress:
+            console=console,
+            transient=True,
+            redirect_stderr=False,
+            redirect_stdout=False,
+            refresh_per_second=1,
+        ) as progress:
         task = progress.add_task(
             "[green] Auditing packages", total=len(pkg_list), start=True
         )
@@ -83,16 +83,16 @@ def metadata_from_registry(registry_type, scoped_pkgs, pkg_list, private_ns=None
                 if private_ns:
                     namespace_prefixes = private_ns.split(",")
                     for ns in namespace_prefixes:
-                        if key.lower().startswith(ns.lower()) or key.lower().startswith(
-                            "@" + ns.lower()
-                        ):
+                        if key.lower().startswith(
+                            ns.lower()
+                        ) or key.lower().startswith(f"@{ns.lower()}"):
                             is_private_pkg = True
                             break
                 risk_metrics = {}
                 if registry_type == "npm":
                     risk_metrics = npm_pkg_risk(json_data, is_private_pkg, scope)
                 elif registry_type == "pypi":
-                    project_type_pkg = "{}:{}".format("python", key).lower()
+                    project_type_pkg = f"python:{key}".lower()
                     required_pkgs = scoped_pkgs.get("required", [])
                     optional_pkgs = scoped_pkgs.get("optional", [])
                     excluded_pkgs = scoped_pkgs.get("excluded", [])
@@ -192,10 +192,7 @@ def calculate_risk_score(risk_metrics):
             value = risk_category_value
             if (
                 risk_category_base
-                and (
-                    isinstance(risk_category_base, float)
-                    or isinstance(risk_category_base, int)
-                )
+                and isinstance(risk_category_base, (float, int))
                 and risk_category_base > risk_category_value
             ):
                 value = risk_category_base - risk_category_value
@@ -229,15 +226,11 @@ def compute_time_risks(
         risk_metrics["latest_now_max_seconds_value"] = latest_now_diff.total_seconds()
         # Since the package is quite old we can relax the min versions risk
         risk_metrics["pkg_min_versions_risk"] = False
-    else:
-        # Check for the minimum seconds difference between creation and modified date
-        # This check catches several old npm packages that was created and immediately updated within a day
-        # To reduce noise we check for the age first and perform this check only for newish packages
-        if mod_create_diff.total_seconds() < config.mod_create_min_seconds:
-            risk_metrics["mod_create_min_seconds_risk"] = True
-            risk_metrics[
-                "mod_create_min_seconds_value"
-            ] = mod_create_diff.total_seconds()
+    elif mod_create_diff.total_seconds() < config.mod_create_min_seconds:
+        risk_metrics["mod_create_min_seconds_risk"] = True
+        risk_metrics[
+            "mod_create_min_seconds_value"
+        ] = mod_create_diff.total_seconds()
     # Check for the minimum seconds difference between latest version and now
     if latest_now_diff.total_seconds() < config.latest_now_min_seconds:
         risk_metrics["latest_now_min_seconds_risk"] = True

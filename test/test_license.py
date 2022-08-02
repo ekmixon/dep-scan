@@ -35,9 +35,7 @@ def test_lookup(test_license_data):
     assert pkg_lic_dict
     violations_list = []
     for pkg, ll in pkg_lic_dict.items():
-        for lic in ll:
-            if lic["condition_flag"]:
-                violations_list.append(lic)
+        violations_list.extend(lic for lic in ll if lic["condition_flag"])
     assert len(violations_list) == 1
 
 
